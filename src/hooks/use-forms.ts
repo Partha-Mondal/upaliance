@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { FormConfig } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
-const STORAGE_KEY = 'formforge-forms';
+const STORAGE_KEY = 'upliance-forms';
 
 export function useForms() {
   const [forms, setForms] = useState<FormConfig[]>([]);

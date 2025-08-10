@@ -5,7 +5,7 @@ import { SiteHeader } from '@/components/site-header';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'FormForge AI',
+  title: 'upliance.ai',
   description: 'Dynamic form builder for upliance.ai',
 };
 
