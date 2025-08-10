@@ -7,6 +7,11 @@ export interface FormFieldValidation {
   pattern?: string; // For things like password rules
 }
 
+export interface Derivation {
+    parentFieldIds: string[];
+    formula: 'age'; // Currently only 'age' is supported
+}
+
 export interface FormField {
   id: string;
   label: string;
@@ -15,6 +20,8 @@ export interface FormField {
   options?: string[];
   validations: FormFieldValidation;
   defaultValue?: string | number | boolean;
+  isDerived?: boolean;
+  derivation?: Derivation;
 }
 
 export interface FormConfig {

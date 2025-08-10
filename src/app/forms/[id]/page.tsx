@@ -11,11 +11,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Trash2, PlusCircle, Save, GripVertical } from 'lucide-react';
+import { Trash2, PlusCircle, Save, GripVertical, Info } from 'lucide-react';
 import { FormRenderer } from '@/components/form-renderer';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const initialForm: Omit<FormConfig, 'id' | 'createdAt' | 'updatedAt'> = {
   name: 'Untitled Form',
@@ -121,6 +123,8 @@ export default function FormBuilderPage() {
   if (!isMounted || !form) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
   }
+  
+  const dateFields = form.fields.filter(f => f.type === 'date');
 
   return (
     <div className="flex-1 bg-muted/40">
@@ -161,66 +165,121 @@ export default function FormBuilderPage() {
                     <Label htmlFor={`label-${field.id}`}>Label</Label>
                     <Input id={`label-${field.id}`} value={field.label} onChange={(e) => updateFormField(field.id, { label: e.target.value })} />
                   </div>
-                  { (field.type === 'text' || field.type === 'email' || field.type === 'number' || field.type === 'textarea' || field.type === 'password') &&
-                    <div>
-                        <Label htmlFor={`defaultValue-${field.id}`}>Default Value</Label>
-                        <Input id={`defaultValue-${field.id}`} value={field.defaultValue as string || ''} onChange={(e) => updateFormField(field.id, { defaultValue: e.target.value })} />
-                    </div>
-                  }
-                  <div>
-                    <Label htmlFor={`placeholder-${field.id}`}>Placeholder</Label>
-                    <Input id={`placeholder-${field.id}`} value={field.placeholder || ''} onChange={(e) => updateFormField(field.id, { placeholder: e.target.value })} />
-                  </div>
                   
-                  {(field.type === 'dropdown' || field.type === 'radio') && (
-                    <div className="space-y-2">
-                        <Label>{field.type === 'dropdown' ? 'Dropdown' : 'Radio'} Options</Label>
-                        {field.options?.map((opt, index) => (
-                            <div key={index} className="flex items-center gap-2">
-                                <Input value={opt} onChange={(e) => updateOption(field.id, index, e.target.value)} />
-                                <Button variant="ghost" size="icon" onClick={() => removeOption(field.id, index)}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                            </div>
-                        ))}
-                        <Button variant="outline" size="sm" onClick={() => addOption(field.id)}>
-                            <PlusCircle className="mr-2 h-4 w-4"/> Add Option
-                        </Button>
-                    </div>
-                  )}
-
-                  <Separator />
-
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Validations</h4>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id={`required-${field.id}`} checked={!!field.validations.required} onCheckedChange={(checked) => updateFormField(field.id, { validations: { ...field.validations, required: !!checked } })} />
-                      <Label htmlFor={`required-${field.id}`}>Required / Not empty</Label>
-                    </div>
-                    {(field.type === 'text' || field.type === 'textarea' || field.type === 'password') && (
-                        <>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label htmlFor={`min-${field.id}`}>Min Length</Label>
-                                <Input id={`min-${field.id}`} type="number" value={field.validations.minLength || ''} onChange={(e) => updateFormField(field.id, { validations: { ...field.validations, minLength: e.target.value ? parseInt(e.target.value) : undefined } })} />
-                            </div>
-                             <div>
-                                <Label htmlFor={`max-${field.id}`}>Max Length</Label>
-                                <Input id={`max-${field.id}`} type="number" value={field.validations.maxLength || ''} onChange={(e) => updateFormField(field.id, { validations: { ...field.validations, maxLength: e.target.value ? parseInt(e.target.value) : undefined } })} />
-                            </div>
-                          </div>
-                          {field.type === 'password' && (
-                              <div className="flex items-center space-x-2">
-                                <Checkbox 
-                                id={`password-rule-${field.id}`} 
-                                checked={field.validations.pattern === '^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$'}
-                                onCheckedChange={(checked) => updateFormField(field.id, { validations: { ...field.validations, pattern: checked ? '^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$' : undefined } })} />
-                                <Label htmlFor={`password-rule-${field.id}`}>Minimum 8 characters, must contain a number</Label>
-                            </div>
-                          )}
-                        </>
-                    )}
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                        id={`derived-${field.id}`}
+                        checked={!!field.isDerived}
+                        onCheckedChange={(checked) => {
+                            if (checked) {
+                                updateFormField(field.id, { isDerived: true, type: 'number', validations: {}, defaultValue: undefined });
+                            } else {
+                                updateFormField(field.id, { isDerived: false, derivation: undefined });
+                            }
+                        }}
+                    />
+                    <Label htmlFor={`derived-${field.id}`}>Derived Field</Label>
                   </div>
+
+                  {field.isDerived ? (
+                     <div className="p-4 border rounded-md bg-muted/20 space-y-4">
+                        <h4 className="font-medium">Derivation Logic</h4>
+                         <Alert>
+                            <Info className="h-4 w-4" />
+                            <AlertTitle>Example: Age from Date of Birth</AlertTitle>
+                            <AlertDescription>
+                                Derived fields compute their value from other fields. Currently, only calculating age from a date field is supported.
+                            </AlertDescription>
+                        </Alert>
+                        <div>
+                            <Label htmlFor={`formula-${field.id}`}>Formula</Label>
+                             <Select 
+                                value={field.derivation?.formula} 
+                                onValueChange={(value: 'age') => updateFormField(field.id, { derivation: { ...field.derivation, parentFieldIds: field.derivation?.parentFieldIds || [], formula: value }})}
+                             >
+                                <SelectTrigger><SelectValue placeholder="Select a formula" /></SelectTrigger>
+                                <SelectContent><SelectItem value="age">Calculate Age from Date</SelectItem></SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label htmlFor={`parent-${field.id}`}>Parent Field (Date of Birth)</Label>
+                             <Select
+                                value={field.derivation?.parentFieldIds?.[0]}
+                                onValueChange={(value) => updateFormField(field.id, { derivation: { ...field.derivation, parentFieldIds: [value], formula: field.derivation?.formula || 'age' }})}
+                             >
+                                <SelectTrigger><SelectValue placeholder="Select the date field" /></SelectTrigger>
+                                <SelectContent>
+                                    {dateFields.filter(df => df.id !== field.id).map(df => (
+                                        <SelectItem key={df.id} value={df.id}>{df.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                     </div>
+                  ) : (
+                    <>
+                      { (field.type === 'text' || field.type === 'email' || field.type === 'number' || field.type === 'textarea' || field.type === 'password') &&
+                        <div>
+                            <Label htmlFor={`defaultValue-${field.id}`}>Default Value</Label>
+                            <Input id={`defaultValue-${field.id}`} value={field.defaultValue as string || ''} onChange={(e) => updateFormField(field.id, { defaultValue: e.target.value })} />
+                        </div>
+                      }
+                      <div>
+                        <Label htmlFor={`placeholder-${field.id}`}>Placeholder</Label>
+                        <Input id={`placeholder-${field.id}`} value={field.placeholder || ''} onChange={(e) => updateFormField(field.id, { placeholder: e.target.value })} />
+                      </div>
+                      
+                      {(field.type === 'dropdown' || field.type === 'radio') && (
+                        <div className="space-y-2">
+                            <Label>{field.type === 'dropdown' ? 'Dropdown' : 'Radio'} Options</Label>
+                            {field.options?.map((opt, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                    <Input value={opt} onChange={(e) => updateOption(field.id, index, e.target.value)} />
+                                    <Button variant="ghost" size="icon" onClick={() => removeOption(field.id, index)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                            ))}
+                            <Button variant="outline" size="sm" onClick={() => addOption(field.id)}>
+                                <PlusCircle className="mr-2 h-4 w-4"/> Add Option
+                            </Button>
+                        </div>
+                      )}
+
+                      <Separator />
+
+                      <div className="space-y-4">
+                        <h4 className="font-medium">Validations</h4>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id={`required-${field.id}`} checked={!!field.validations.required} onCheckedChange={(checked) => updateFormField(field.id, { validations: { ...field.validations, required: !!checked } })} />
+                          <Label htmlFor={`required-${field.id}`}>Required / Not empty</Label>
+                        </div>
+                        {(field.type === 'text' || field.type === 'textarea' || field.type === 'password') && (
+                            <>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor={`min-${field.id}`}>Min Length</Label>
+                                    <Input id={`min-${field.id}`} type="number" value={field.validations.minLength || ''} onChange={(e) => updateFormField(field.id, { validations: { ...field.validations, minLength: e.target.value ? parseInt(e.target.value) : undefined } })} />
+                                </div>
+                                 <div>
+                                    <Label htmlFor={`max-${field.id}`}>Max Length</Label>
+                                    <Input id={`max-${field.id}`} type="number" value={field.validations.maxLength || ''} onChange={(e) => updateFormField(field.id, { validations: { ...field.validations, maxLength: e.target.value ? parseInt(e.target.value) : undefined } })} />
+                                </div>
+                              </div>
+                              {field.type === 'password' && (
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox 
+                                    id={`password-rule-${field.id}`} 
+                                    checked={field.validations.pattern === '^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$'}
+                                    onCheckedChange={(checked) => updateFormField(field.id, { validations: { ...field.validations, pattern: checked ? '^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$' : undefined } })} />
+                                    <Label htmlFor={`password-rule-${field.id}`}>Minimum 8 characters, must contain a number</Label>
+                                </div>
+                              )}
+                            </>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             ))}
