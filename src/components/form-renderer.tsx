@@ -9,7 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useToast } from './ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
+import { Textarea } from './ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { Calendar } from './ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 interface FormRendererProps {
   formConfig: FormConfig;
@@ -32,10 +39,30 @@ export function FormRenderer({ formConfig, isPreview = false }: FormRendererProp
           zodField = z.coerce.number();
           break;
         case 'checkbox':
-          zodField = z.boolean().default(false);
+          zodField = z.boolean().default(!!field.defaultValue);
           break;
+        case 'date':
+            zodField = z.date();
+            break;
         case 'dropdown':
+        case 'radio':
           zodField = z.string();
+          break;
+        case 'password':
+        case 'textarea':
+        case 'text':
+          zodField = z.string();
+          if (field.validations.minLength) {
+            zodField = zodField.min(field.validations.minLength, {message: `${field.label} must be at least ${field.validations.minLength} characters.`});
+          }
+          if (field.validations.maxLength) {
+            zodField = zodField.max(field.validations.maxLength, {message: `${field.label} must be at most ${field.validations.maxLength} characters.`});
+          }
+          if (field.validations.pattern) {
+              zodField = zodField.regex(new RegExp(field.validations.pattern), {
+                  message: `Invalid ${field.label}`
+              });
+          }
           break;
         default:
           zodField = z.string();
@@ -46,13 +73,17 @@ export function FormRenderer({ formConfig, isPreview = false }: FormRendererProp
           zodField = (zodField as z.ZodBoolean).refine(val => val === true, {
             message: `${field.label} is required.`,
           });
-        } else if (field.type === 'text' || field.type === 'email' || field.type === 'dropdown') {
-            zodField = (zodField as z.ZodString).min(1, { message: `${field.label} is required.` });
+        } else if (zodField instanceof z.ZodString) {
+            zodField = zodField.min(1, { message: `${field.label} is required.` });
+        } else if (zodField instanceof z.ZodNumber) {
+            zodField = zodField.refine(val => val !== undefined && val !== null, `${field.label} is required.`)
+        } else if (zodField instanceof z.ZodDate) {
+            zodField = zodField.refine(val => val !== undefined && val !== null, `${field.label} is required.`)
         }
       }
       
       if (!field.validations.required && field.type !== 'checkbox') {
-          zodField = zodField.optional();
+          zodField = zodField.optional().nullable();
       }
 
 
@@ -65,7 +96,7 @@ export function FormRenderer({ formConfig, isPreview = false }: FormRendererProp
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: formConfig.fields.reduce((acc, field) => {
-        acc[field.id] = field.type === 'checkbox' ? false : '';
+        acc[field.id] = field.defaultValue ?? (field.type === 'checkbox' ? false : undefined);
         return acc;
     }, {} as any)
   });
@@ -91,7 +122,7 @@ export function FormRenderer({ formConfig, isPreview = false }: FormRendererProp
                 {field.type !== 'checkbox' && <FormLabel>{field.label}</FormLabel>}
                 <FormControl>
                   <>
-                    {field.type === 'text' || field.type === 'email' || field.type === 'number' ? (
+                    {field.type === 'text' || field.type === 'email' || field.type === 'number' || field.type === 'password' ? (
                       <Input
                         type={field.type}
                         placeholder={field.placeholder}
@@ -99,6 +130,13 @@ export function FormRenderer({ formConfig, isPreview = false }: FormRendererProp
                         disabled={isPreview}
                         value={rhfField.value ?? ""}
                       />
+                    ) : field.type === 'textarea' ? (
+                        <Textarea
+                           placeholder={field.placeholder}
+                           {...rhfField}
+                           disabled={isPreview}
+                           value={rhfField.value ?? ""}
+                        />
                     ) : field.type === 'dropdown' ? (
                       <Select onValueChange={rhfField.onChange} defaultValue={rhfField.value} disabled={isPreview}>
                         <FormControl>
@@ -114,6 +152,22 @@ export function FormRenderer({ formConfig, isPreview = false }: FormRendererProp
                           ))}
                         </SelectContent>
                       </Select>
+                    ) : field.type === 'radio' ? (
+                      <RadioGroup
+                        onValueChange={rhfField.onChange}
+                        defaultValue={rhfField.value}
+                        className="flex flex-col space-y-1"
+                        disabled={isPreview}
+                      >
+                        {field.options?.map(option => (
+                           <FormItem key={option} className="flex items-center space-x-3 space-y-0">
+                             <FormControl>
+                               <RadioGroupItem value={option} />
+                             </FormControl>
+                             <FormLabel className="font-normal">{option}</FormLabel>
+                           </FormItem>
+                        ))}
+                      </RadioGroup>
                     ) : field.type === 'checkbox' ? (
                         <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                             <FormControl>
@@ -127,6 +181,37 @@ export function FormRenderer({ formConfig, isPreview = false }: FormRendererProp
                                 <FormLabel>{field.label}</FormLabel>
                             </div>
                       </FormItem>
+                    ) : field.type === 'date' ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                           <FormControl>
+                             <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !rhfField.value && "text-muted-foreground"
+                              )}
+                              disabled={isPreview}
+                            >
+                              {rhfField.value ? (
+                                format(rhfField.value, "PPP")
+                              ) : (
+                                <span>{field.placeholder || 'Pick a date'}</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                           </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                           <Calendar
+                            mode="single"
+                            selected={rhfField.value}
+                            onSelect={rhfField.onChange}
+                            disabled={(date) => isPreview || date > new Date() || date < new Date("1900-01-01")}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     ) : null}
                   </>
                 </FormControl>
