@@ -24,6 +24,7 @@ export default function FormPreviewPage() {
     } else if (isMounted) {
       router.push('/');
     }
+    
     setIsMounted(true);
   }, [formId, getForm, router, isMounted]);
 
