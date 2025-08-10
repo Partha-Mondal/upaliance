@@ -51,7 +51,6 @@ export default function FormBuilderPage() {
         router.push('/');
       }
     }
-    
     setIsMounted(true);
   }, [formId, getForm, isNewForm, router]);
 
