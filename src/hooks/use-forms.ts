@@ -15,7 +15,7 @@ export function useForms() {
     try {
       const storedForms = window.localStorage.getItem(STORAGE_KEY);
       if (storedForms) {
-        setForms(JSON.parse(storedForms));
+        setForms(JSON.parse(storedForms).sort((a: FormConfig, b: FormConfig) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
       }
     } catch (error) {
       console.error('Failed to load forms from localStorage', error);
@@ -31,8 +31,9 @@ export function useForms() {
 
   const saveForms = useCallback((updatedForms: FormConfig[]) => {
     try {
-      setForms(updatedForms);
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedForms));
+      const sortedForms = updatedForms.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      setForms(sortedForms);
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(sortedForms));
     } catch (error) {
       console.error('Failed to save forms to localStorage', error);
       toast({

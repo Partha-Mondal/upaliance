@@ -51,11 +51,14 @@ export default function HomePage() {
             <CardHeader>
               <CardTitle className="truncate">{form.name}</CardTitle>
               <CardDescription>
-                Last updated: {format(new Date(form.updatedAt), 'PPP')}
+                Created: {format(new Date(form.createdAt), 'PPP')}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{form.fields.length} field(s)</p>
+               <p className="text-sm text-muted-foreground">
+                Last updated: {format(new Date(form.updatedAt), 'PPP')}
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">{form.fields.length} field(s)</p>
             </CardContent>
             <CardFooter className="flex justify-between gap-2">
               <Button variant="outline" size="sm" onClick={() => router.push(`/forms/${form.id}/preview`)}>
