@@ -5,8 +5,8 @@ import { SiteHeader } from '@/components/site-header';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'upliance.ai',
-  description: 'Dynamic form builder for upliance.ai',
+  title: 'Upliance.ai',
+  description: 'Dynamic form builder for Upliance.ai',
 };
 
 export default function RootLayout({

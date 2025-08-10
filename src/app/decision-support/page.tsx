@@ -6,7 +6,7 @@ export default function DecisionSupportPage() {
             <div className="text-center mb-12">
                 <h1 className="text-4xl font-bold tracking-tight text-gray-900">AI Cooking Assistant</h1>
                 <p className="mt-4 text-xl text-muted-foreground">
-                    Let upliance.ai help you decide what to cook next!
+                    Let Upliance.ai help you decide what to cook next!
                 </p>
             </div>
             <DecisionMaker />
